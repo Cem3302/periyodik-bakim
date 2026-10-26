@@ -14,11 +14,12 @@ Kurulum gerektirmez — tek dosya, tarayıcıda çalışır.
 - **Makine ekleme / silme**: yeni kategoriyle birlikte, tekil kod doğrulaması
 - **Bakım geçmişi**: tüm bakım ve sayaç kayıtları aranabilir
 - **TR / EN arayüz**: tek tıkla dil değiştirme, tercih hatırlanır
-- **Veri**: localStorage kalıcılığı, CSV dışa aktarım (Excel uyumlu), JSON yedek/geri yükleme, Excel'e sıfırlama
+- **Bulut senkronu**: Firebase Realtime Database ile cihazlar arası canlı senkron (son yazan kazanır); bağlantı yokken localStorage devrede, bağlantı gelince eşitlenir
+- **Veri**: CSV dışa aktarım (Excel uyumlu), JSON yedek/geri yükleme, Excel'e sıfırlama
 
 ## Kullanım
 
-`index.html` dosyasını herhangi bir tarayıcıda açmanız yeterlidir. Veriler tarayıcının localStorage'ında tutulur; "⬇ Yedek" ile JSON yedeği alıp başka makineye taşıyabilirsiniz.
+`index.html` dosyasını herhangi bir tarayıcıda açmanız yeterlidir. Veriler önce tarayıcının localStorage'ında tutulur, ardından Firebase Realtime Database üzerinden tüm cihazlarla otomatik senkronize olur. "⬇ Yedek" ile JSON yedeği de alabilirsiniz.
 
 ## Kaynak veri
 

@@ -115,6 +115,7 @@
     <button class="tab" data-view="fleet" data-i18n="tabFleet">Filo</button>
     <button class="tab" data-view="history" data-i18n="tabHistory">Bakım Geçmişi</button>
   </div>
+  <span id="syncBadge" class="pill gray" style="align-self:center">☁️ …</span>
   <div class="h-actions">
     <button class="btn" id="langBtn" onclick="toggleLang()" title="Dil / Language">🌐 TR</button>
     <button class="btn" onclick="exportCSV()">⬇ CSV</button>
@@ -352,7 +353,8 @@ const I18N = {
     csvToast:"CSV indirildi (Excel ile açılabilir)", backupToast:"JSON yedek indirildi",
     restored:"Yedek geri yüklendi", restoreFail:"Yedek dosyası okunamadı",
     confirmReset:"Tüm kayıtlar silinip Excel verisine sıfırlanacak. Emin misiniz?", resetDone:"Excel verisine sıfırlandı",
-    langToast:"🌐 Arayüz dili: Türkçe"
+    langToast:"🌐 Arayüz dili: Türkçe",
+    syncConnecting:"Bağlanıyor…", syncOnline:"Senkronize", syncOffline:"Çevrimdışı"
   },
   en: {
     docTitle:"PEMBA · Preventive Maintenance Management System", titleMid:"Preventive Maintenance", titleSuffix:"Management System",
@@ -399,7 +401,8 @@ const I18N = {
     csvToast:"CSV downloaded (opens in Excel)", backupToast:"JSON backup downloaded",
     restored:"Backup restored", restoreFail:"Could not read the backup file",
     confirmReset:"All records will be erased and reset to the Excel data. Are you sure?", resetDone:"Reset to Excel data",
-    langToast:"🌐 Interface language: English"
+    langToast:"🌐 Interface language: English",
+    syncConnecting:"Connecting…", syncOnline:"Synced", syncOffline:"Offline"
   }
 };
 let lang = 'tr';
@@ -411,6 +414,7 @@ function applyI18n(){
   if(lb) lb.textContent = lang === 'tr' ? '🌐 TR' : '🌐 EN';
   document.documentElement.lang = lang;
   document.title = t('docTitle');
+  renderSyncBadge();
 }
 function toggleLang(){
   lang = lang === 'tr' ? 'en' : 'tr';
@@ -426,7 +430,7 @@ let store = loadStore();
 function loadStore(){
   try{
     const raw = localStorage.getItem(STORE_KEY);
-    if(raw){ const s = JSON.parse(raw); if(s && s.vehicles){ if(!s.settings) s.settings = { lang:'tr' }; lang = s.settings.lang === 'en' ? 'en' : 'tr'; return s; } }
+    if(raw){ const s = JSON.parse(raw); const n = normalizeStore(s); if(n){ lang = n.settings.lang === 'en' ? 'en' : 'tr'; return n; } }
   }catch(e){}
   return seedStore();
 }
@@ -443,7 +447,9 @@ function seedStore(){
   return { vehicles, history:[], intervals:{}, settings:{ lang:'tr' } };
 }
 function persist(){
-  try{ localStorage.setItem(STORE_KEY, JSON.stringify(store)); }catch(e){}
+  store.rev = Date.now();
+  saveLocal();
+  schedulePush();
 }
 function resetAll(){
   if(!confirm(t('confirmReset'))) return;
@@ -875,10 +881,134 @@ function deleteMachine(key){
   toast(t('deleted').replace('{c}', v.code));
 }
 
+/* ============ CLOUD SYNC (Firebase RTDB REST) ============ */
+const SYNC_DB = 'https://pemba-bakim-default-rtdb.europe-west1.firebasedatabase.app';
+let syncState = 'connecting';
+let pushTimer = null, retryTimer = null, syncPrimed = false;
+
+function normalizeStore(s){
+  if(!s || typeof s !== 'object' || !s.vehicles || typeof s.vehicles !== 'object') return null;
+  if(!Array.isArray(s.history)) s.history = [];
+  if(!s.intervals || typeof s.intervals !== 'object') s.intervals = {};
+  if(!s.settings || typeof s.settings !== 'object') s.settings = { lang:'tr' };
+  for(const v of Object.values(s.vehicles)){
+    if(!v || typeof v !== 'object') continue;
+    v.last = v.last ?? null;
+    v.current = v.current ?? null;
+    v.date = v.date ?? null;
+    v.location = v.location ?? null;
+    v.filters = v.filters ?? null;
+    v.nextMan = v.nextMan ?? null;
+    if(typeof v.interval !== 'number' || v.interval < 1) v.interval = 250;
+    if(v.unit !== 'KM' && v.unit !== 'HR') v.unit = 'KM';
+    if(typeof v.cat !== 'string' || !v.cat) v.cat = 'GENEL';
+    if(typeof v.code !== 'string' || !v.code) v.code = '?';
+  }
+  return s;
+}
+
+function renderSyncBadge(){
+  const b = document.getElementById('syncBadge');
+  if(!b) return;
+  const map = { connecting:['gray','syncConnecting'], online:['green','syncOnline'], offline:['orange','syncOffline'] };
+  const [cls, key] = map[syncState] || map.connecting;
+  b.className = 'pill ' + cls;
+  b.textContent = '☁️ ' + t(key);
+}
+function setSync(s){ if(syncState !== s){ syncState = s; renderSyncBadge(); } }
+
+function saveLocal(){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(store)); }catch(e){}
+}
+function schedulePush(){
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(pushNow, 700);
+}
+async function pushNow(){
+  try{
+    const env = { rev: store.rev || 0, store };
+    const r = await fetch(SYNC_DB + '/state.json', {
+      method:'PUT', headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify(env)
+    });
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    setSync('online');
+  }catch(e){
+    setSync('offline');
+    clearTimeout(retryTimer);
+    retryTimer = setTimeout(pushNow, 5000);
+  }
+}
+function applyRemote(env){
+  if(!env || typeof env.rev !== 'number') return false;
+  const s = normalizeStore(env.store);
+  if(!s) return false;
+  s.rev = env.rev;
+  if(env.rev > (store.rev || 0)){
+    store = s;
+    saveLocal();
+    renderAll();
+    return true;
+  }
+  return false;
+}
+function handleSse(chunk){
+  let ev = '', data = '';
+  for(const line of chunk.split('\n')){
+    if(line.startsWith('event:')) ev = line.slice(6).trim();
+    else if(line.startsWith('data:')) data += line.slice(5).trim();
+  }
+  if(ev !== 'put' && ev !== 'patch') return;
+  let payload;
+  try{ payload = JSON.parse(data); }catch(e){ return; }
+  if(!payload || payload.path !== '/') return;
+  const env = payload.data;
+  const wasFirst = !syncPrimed;
+  syncPrimed = true;
+  const adopted = applyRemote(env);
+  setSync('online');
+  if(wasFirst){
+    if(adopted) return;
+    if(!env){ schedulePush(); return; }
+    if((store.rev || 0) > (env.rev || 0)){ schedulePush(); return; }
+    if(env.rev === 0 && JSON.stringify(store) !== JSON.stringify(normalizeStore(env.store) || {})){ schedulePush(); return; }
+  } else if(env && env.rev === 0 && (store.rev || 0) > 0){
+    schedulePush();
+  }
+}
+async function syncListen(){
+  for(;;){
+    try{
+      if(syncPrimed) setSync('offline');
+      const res = await fetch(SYNC_DB + '/state.json', {
+        headers:{ 'Accept':'text/event-stream' }, cache:'no-store'
+      });
+      if(!res.ok || !res.body) throw new Error('SSE HTTP ' + res.status);
+      const rd = res.body.getReader();
+      const dec = new TextDecoder();
+      let buf = '';
+      for(;;){
+        const { value, done } = await rd.read();
+        if(done) break;
+        buf += dec.decode(value, { stream:true });
+        let i;
+        while((i = buf.indexOf('\n\n')) >= 0){
+          const chunk = buf.slice(0, i); buf = buf.slice(i + 2);
+          handleSse(chunk);
+        }
+      }
+    }catch(e){}
+    setSync('offline');
+    await new Promise(r => setTimeout(r, 3000));
+  }
+}
+function syncInit(){ syncListen(); }
+
 /* ============ INIT ============ */
 function renderAll(){ renderDashboard(); renderFilters(); renderFleet(); renderHistory(); }
 applyI18n();
 renderAll();
+syncInit();
 </script>
 </body>
 </html>
