@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PEMBA · Periyodik Bakım Yönetim Sistemi</title>
+<style>
+  :root{
+    --bg:#0f141b; --panel:#171e27; --panel2:#1d2632; --line:#2a3644;
+    --txt:#e6edf5; --muted:#8b9bb0; --accent:#3b82f6;
+    --red:#ef4444; --orange:#f59e0b; --green:#22c55e; --gray:#64748b; --cyan:#06b6d4;
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  body{font-family:"Segoe UI",system-ui,sans-serif; background:var(--bg); color:var(--txt); font-size:14px}
+  header{display:flex; align-items:center; gap:16px; padding:14px 22px; background:var(--panel); border-bottom:1px solid var(--line); position:sticky; top:0; z-index:50; flex-wrap:wrap}
+  header h1{font-size:17px; font-weight:600; letter-spacing:.3px}
+  header h1 span{color:var(--accent)}
+  .tabs{display:flex; gap:6px; margin-left:8px}
+  .tab{padding:7px 16px; border-radius:8px; background:transparent; border:1px solid var(--line); color:var(--muted); cursor:pointer; font-size:13px}
+  .tab:hover{color:var(--txt); border-color:#3b4a5e}
+  .tab.active{background:var(--accent); border-color:var(--accent); color:#fff}
+  .h-actions{margin-left:auto; display:flex; gap:8px; flex-wrap:wrap}
+  .btn{padding:7px 14px; border-radius:8px; border:1px solid var(--line); background:var(--panel2); color:var(--txt); cursor:pointer; font-size:13px}
+  .btn:hover{border-color:#3b4a5e; background:#243041}
+  .btn.primary{background:var(--accent); border-color:var(--accent); color:#fff}
+  .btn.primary:hover{background:#2f6fd6}
+  .btn.danger{color:#fca5a5; border-color:#7f1d1d}
+  .btn.danger:hover{background:#7f1d1d33}
+  .btn.sm{padding:4px 10px; font-size:12px; border-radius:6px}
+  main{padding:20px 22px; max-width:1500px; margin:0 auto}
+  .view{display:none} .view.active{display:block}
+
+  /* dashboard */
+  .cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-bottom:18px}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px}
+  .card .num{font-size:30px; font-weight:700; line-height:1.1}
+  .card .lbl{color:var(--muted); font-size:12px; margin-top:4px; text-transform:uppercase; letter-spacing:.6px}
+  .card.red .num{color:var(--red)} .card.orange .num{color:var(--orange)}
+  .card.green .num{color:var(--green)} .card.gray .num{color:var(--gray)}
+  .card.blue .num{color:var(--cyan)}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+  @media(max-width:980px){.grid2{grid-template-columns:1fr}}
+  .panel{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px}
+  .panel h2{font-size:14px; margin-bottom:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.8px}
+  .catrow{display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px dashed var(--line)}
+  .catrow:last-child{border-bottom:none}
+  .catrow .name{flex:1; font-weight:600}
+  .bar{height:8px; background:#0c1117; border-radius:6px; overflow:hidden; flex:2; display:flex}
+  .bar i{display:block; height:100%}
+  .pill{font-size:11px; padding:2px 9px; border-radius:99px; font-weight:600; white-space:nowrap}
+  .pill.red{background:#ef444426; color:#fca5a5; border:1px solid #ef444455}
+  .pill.orange{background:#f59e0b26; color:#fcd34d; border:1px solid #f59e0b55}
+  .pill.green{background:#22c55e26; color:#86efac; border:1px solid #22c55e55}
+  .pill.gray{background:#64748b26; color:#cbd5e1; border:1px solid #64748b55}
+  .interval-row{display:flex; align-items:center; gap:10px; padding:7px 0; border-bottom:1px dashed var(--line)}
+  .interval-row:last-child{border:none}
+  .interval-row input{width:90px; background:#0c1117; border:1px solid var(--line); color:var(--txt); border-radius:6px; padding:5px 8px; text-align:right}
+  .interval-row .unit{color:var(--muted); font-size:12px; width:28px}
+
+  /* filters + table */
+  .filters{display:flex; gap:10px; margin-bottom:12px; flex-wrap:wrap; align-items:center}
+  .filters input,.filters select{background:var(--panel); border:1px solid var(--line); color:var(--txt); border-radius:8px; padding:8px 12px; font-size:13px}
+  .filters input{min-width:240px}
+  .filters input:focus,.filters select:focus{outline:none; border-color:var(--accent)}
+  .tablewrap{overflow:auto; max-height:calc(100vh - 250px); border:1px solid var(--line); border-radius:12px; background:var(--panel)}
+  table{width:100%; border-collapse:collapse; font-size:13px}
+  th{position:sticky; top:0; background:var(--panel2); text-align:left; padding:10px 12px; color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.6px; border-bottom:1px solid var(--line); cursor:pointer; user-select:none; white-space:nowrap; z-index:5}
+  th:hover{color:var(--txt)}
+  td{padding:8px 12px; border-bottom:1px solid #202a37; white-space:nowrap}
+  tr:hover td{background:#1b2532}
+  .code{font-weight:700; color:var(--cyan); letter-spacing:.4px}
+  .num-cell{text-align:right; font-variant-numeric:tabular-nums}
+  .kalan-cell{min-width:130px}
+  .kalan-bar{height:6px; background:#0c1117; border-radius:4px; overflow:hidden; margin-top:4px}
+  .kalan-bar i{display:block; height:100%; border-radius:4px}
+  .row-actions{display:flex; gap:6px}
+  .muted{color:var(--muted)}
+  .count{color:var(--muted); font-size:12px; margin:8px 2px}
+
+  /* modal */
+  .overlay{display:none; position:fixed; inset:0; background:#000a; z-index:100; align-items:center; justify-content:center}
+  .overlay.open{display:flex}
+  .modal{background:var(--panel); border:1px solid var(--line); border-radius:14px; width:440px; max-width:94vw; padding:20px; box-shadow:0 24px 60px #000a}
+  .modal h3{font-size:16px; margin-bottom:4px}
+  .modal .sub{color:var(--muted); font-size:12px; margin-bottom:14px}
+  .field{margin-bottom:12px}
+  .field label{display:block; font-size:12px; color:var(--muted); margin-bottom:5px}
+  .field input,.field textarea,.field select{width:100%; background:#0c1117; border:1px solid var(--line); color:var(--txt); border-radius:8px; padding:9px 11px; font-size:14px; font-family:inherit}
+  .field input:focus,.field textarea:focus{outline:none; border-color:var(--accent)}
+  .modal-actions{display:flex; justify-content:flex-end; gap:8px; margin-top:16px}
+  .hint{font-size:11px; color:var(--muted); margin-top:4px}
+
+  /* toast */
+  #toast{position:fixed; bottom:22px; right:22px; background:var(--panel2); border:1px solid var(--accent); color:var(--txt); padding:11px 18px; border-radius:10px; opacity:0; transform:translateY(12px); transition:.25s; z-index:200; pointer-events:none}
+  #toast.show{opacity:1; transform:translateY(0)}
+
+  .urgent-item{display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px dashed var(--line)}
+  .urgent-item:last-child{border:none}
+  .urgent-item .code{width:90px}
+  .urgent-item .kalan{margin-left:auto; font-weight:700}
+  @media print{
+    header,.h-actions,.filters,.row-actions,.tabs{display:none!important}
+    body{background:#fff; color:#000}
+    .tablewrap{max-height:none; border:none; overflow:visible}
+    th{background:#eee; color:#000} td{border-color:#ccc}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🔧 PEMBA · <span data-i18n="titleMid">Periyodik Bakım</span> <span data-i18n="titleSuffix">Yönetim Sistemi</span></h1>
+  <div class="tabs">
+    <button class="tab active" data-view="dashboard" data-i18n="tabDashboard">Panel</button>
+    <button class="tab" data-view="fleet" data-i18n="tabFleet">Filo</button>
+    <button class="tab" data-view="history" data-i18n="tabHistory">Bakım Geçmişi</button>
+  </div>
+  <div class="h-actions">
+    <button class="btn" id="langBtn" onclick="toggleLang()" title="Dil / Language">🌐 TR</button>
+    <button class="btn" onclick="exportCSV()">⬇ CSV</button>
+    <button class="btn" onclick="backupJSON()" data-i18n="backup">⬇ Yedek</button>
+    <button class="btn" onclick="document.getElementById('restoreFile').click()" data-i18n="restore">⬆ Yedek Yükle</button>
+    <button class="btn danger" onclick="resetAll()" data-i18n="resetExcel">Excel'e Sıfırla</button>
+    <input type="file" id="restoreFile" accept=".json" style="display:none" onchange="restoreJSON(event)">
+  </div>
+</header>
+
+<main>
+
+  <!-- ============ DASHBOARD ============ -->
+  <section id="view-dashboard" class="view active">
+    <div class="cards" id="statCards"></div>
+    <div class="grid2">
+      <div class="panel">
+        <h2 data-i18n="catSummaryH">Kategori Bazlı Durum</h2>
+        <div id="catSummary"></div>
+      </div>
+      <div class="panel">
+        <h2 data-i18n="intervalsH">Bakım Periyotları (düzenlenebilir)</h2>
+        <div id="intervalEditor"></div>
+        <div class="hint" style="margin-top:8px" data-i18n="intervalsHint">Değişiklikler otomatik kaydedilir ve tüm hesaplamalara yansır.</div>
+      </div>
+      <div class="panel" style="grid-column:1/-1">
+        <h2 data-i18n="urgentH">En Acil 15 Bakım</h2>
+        <div id="urgentList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FLEET ============ -->
+  <section id="view-fleet" class="view">
+    <div class="filters">
+      <input type="text" id="search" placeholder="🔍 Filo kodu ara... (ör. DT-045)" data-i18n-ph="searchPh">
+      <select id="catFilter"><option value="" data-i18n="allCats">Tüm Kategoriler</option></select>
+      <select id="statusFilter">
+        <option value="" data-i18n="allStatuses">Tüm Durumlar</option>
+        <option value="overdue" data-i18n="status_overdue">Gecikmiş</option>
+        <option value="soon" data-i18n="status_soon">Yaklaşıyor</option>
+        <option value="ok" data-i18n="status_ok">Uygun</option>
+        <option value="nodata" data-i18n="status_nodata">Veri Yok</option>
+      </select>
+      <span class="count" id="rowCount"></span>
+      <button class="btn primary" onclick="openAdd()" style="margin-left:auto"><span data-i18n="addMachine">＋ Makine Ekle</span></button>
+    </div>
+    <div class="tablewrap">
+      <table id="fleetTable">
+        <thead>
+          <tr>
+            <th data-sort="code" data-i18n="colCode">Filo Kodu</th>
+            <th data-sort="cat" data-i18n="colCat">Kategori</th>
+            <th data-sort="last" data-i18n="colLast">Son Bakım</th>
+            <th data-sort="next" data-i18n="colNext">Sonraki Bakım</th>
+            <th data-sort="current" data-i18n="colCurrent">Mevcut</th>
+            <th data-sort="kalan" data-i18n="colRemaining">Kalan</th>
+            <th data-sort="status" data-i18n="colStatus">Durum</th>
+            <th data-sort="date" data-i18n="colDate">Bakım Tarihi</th>
+            <th data-sort="location" data-i18n="colLocation">Lokasyon</th>
+            <th data-sort="filters" data-i18n="colFilters">Kullanılan Filtreler</th>
+            <th data-i18n="colAction">İşlem</th>
+          </tr>
+        </thead>
+        <tbody id="fleetBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ HISTORY ============ -->
+  <section id="view-history" class="view">
+    <div class="filters">
+      <input type="text" id="histSearch" placeholder="🔍 Kod veya açıklama ara..." data-i18n-ph="histPh">
+      <span class="count" id="histCount"></span>
+      <button class="btn danger sm" style="margin-left:auto" onclick="clearHistory()" data-i18n="clearHistory">Geçmişi Temizle</button>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th data-i18n="hDate">Tarih</th><th data-i18n="hCode">Filo Kodu</th><th data-i18n="hCat">Kategori</th><th data-i18n="hAction">İşlem</th><th data-i18n="hValue">Değer</th><th data-i18n="hLocation">Lokasyon</th><th data-i18n="hFiltersNote">Filtreler / Not</th></tr>
+        </thead>
+        <tbody id="histBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<!-- ============ MODALS ============ -->
+<div class="overlay" id="maintOverlay">
+  <div class="modal">
+    <h3 data-i18n="maintTitle">🛠 Bakım Kaydı</h3>
+    <div class="sub" id="maintInfo"></div>
+    <div class="field">
+      <label data-i18n="dateLbl">Bakım Tarihi</label>
+      <input type="date" id="mDate">
+    </div>
+    <div class="field">
+      <label id="mValueLabel">Bakım Anındaki Değer</label>
+      <input type="number" id="mValue" placeholder="ör. 12500" min="0" data-i18n-ph="phValue">
+      <div class="hint" id="mValueHint"></div>
+    </div>
+    <div class="field">
+      <label data-i18n="nextManualLbl">Sonraki Bakım (elle)</label>
+      <input type="number" id="mNext" min="0">
+      <div class="hint" data-i18n="nextManualHint">Boş bırakırsanız otomatik hesaplanır (Son Bakım + Periyot).</div>
+    </div>
+    <div class="field">
+      <label data-i18n="locationLbl">Lokasyon</label>
+      <input type="text" id="mLocation" placeholder="ör. Atölye-1 / Şantiye A" data-i18n-ph="phLocation">
+    </div>
+    <div class="field">
+      <label data-i18n="filtersLbl">Kullanılan Filtreler</label>
+      <input type="text" id="mFilters" placeholder="ör. Yağ, Yakıt, Hava filtresi" data-i18n-ph="phFilters">
+    </div>
+    <div class="field">
+      <label data-i18n="noteLbl">Not (opsiyonel)</label>
+      <textarea id="mNote" rows="2" placeholder="Ek açıklamalar..." data-i18n-ph="phNote"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('maintOverlay')" data-i18n="cancel">İptal</button>
+      <button class="btn primary" onclick="saveMaintenance()" data-i18n="save">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="readingOverlay">
+  <div class="modal">
+    <h3 data-i18n="readingTitle">⚡ Sayaç Güncelle</h3>
+    <div class="sub" id="readingInfo"></div>
+    <div class="field">
+      <label id="rValueLabel">Mevcut Değer</label>
+      <input type="number" id="rValue" placeholder="ör. 14320" min="0" data-i18n-ph="phValue">
+    </div>
+    <div class="field">
+      <label data-i18n="nextManualLbl">Sonraki Bakım (elle)</label>
+      <input type="number" id="rNext" min="0">
+      <div class="hint" data-i18n="nextManualHint">Boş bırakırsanız otomatik hesaplanır (Son Bakım + Periyot).</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('readingOverlay')" data-i18n="cancel">İptal</button>
+      <button class="btn primary" onclick="saveReading()" data-i18n="save">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="addOverlay">
+  <div class="modal">
+    <h3 data-i18n="addTitle">➕ Makine Ekle</h3>
+    <div class="sub" data-i18n="addSub">Filo kodu, kategori ve periyot ile yeni bir makine ekleyin.</div>
+    <div class="field">
+      <label data-i18n="fCode">Filo Kodu</label>
+      <input type="text" id="aCode" placeholder="ör. DT-120" data-i18n-ph="fCodePh">
+      <div class="hint" id="aCodeHint"></div>
+    </div>
+    <div class="field">
+      <label data-i18n="fCategory">Kategori</label>
+      <input type="text" id="aCat" list="catList" placeholder="ör. HEAVY TRUCKS" data-i18n-ph="fCategoryPh">
+      <datalist id="catList"></datalist>
+      <div class="hint" data-i18n="addSubHint">Mevut kategoriyi seçin veya yeni bir kategori yazın.</div>
+    </div>
+    <div class="field">
+      <label data-i18n="fUnit">Birim</label>
+      <select id="aUnit"><option>KM</option><option>HR</option></select>
+    </div>
+    <div class="field">
+      <label data-i18n="fInterval">Bakım Periyodu</label>
+      <input type="number" id="aInterval" min="1" placeholder="ör. 5000" data-i18n-ph="fIntervalPh">
+    </div>
+    <div class="field">
+      <label data-i18n="fCurrent">Mevcut Değer (opsiyonel)</label>
+      <input type="number" id="aCurrent" min="0" placeholder="ör. 0" data-i18n-ph="fCurrentPh">
+    </div>
+    <div class="field">
+      <label data-i18n="fLocation">Lokasyon (opsiyonel)</label>
+      <input type="text" id="aLocation" placeholder="ör. Atölye-1 / Şantiye A" data-i18n-ph="phLocation">
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('addOverlay')" data-i18n="cancel">İptal</button>
+      <button class="btn primary" onclick="saveMachine()" data-i18n="save">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ============ DATA ============ */
+const SEED = [{"name":"HEAVY EQUIPMENT","unit":"HR","interval":250,"rows":[{"code":"BD-002","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"BD-012","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"BD-013","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"BL-005","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"BL-008","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"BL-011","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"BL-013","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"BL-021","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"BT-007","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"BT-011","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"CRD-002","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DDC-004","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"EX-120","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"EX-121","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"EX-122","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"EX-125","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"EX-130","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"EX-131","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"EX-132","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"EX-140","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"EX-143","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"EX-152","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"EX-154","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"EX-171","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"EX-172","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"EX-181","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"EX-183","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"EX-184","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"EX-204","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"EX-215","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"EX-216","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"EX-217","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"EX-300","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"EX-301","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"EX-306","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"EX-310","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"EX-316","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"FS-001","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"FS-003","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"GR-001","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"GR-003","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"GR-006","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"GR-008","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"GR-009","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"GR-012","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"GR-013","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"MC-003","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"MC-006","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"PS-003","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"PS-004","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"PTR-002","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"PTR-003","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"PTR-005","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"RC-006","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"RC-008","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"RC-012","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"RC-014","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"RC-015","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"RC-017","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"RC-018","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"RC-019","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"RC-020","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"RC-022","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"RC-023","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"TL-006","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"TL-010","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"TL-012","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"TR-002","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"TRC-001","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"TRC-002","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"TRC-004","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"W-EX-002","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"W-EX-004","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"W-EX-005","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"WL-204","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"WL-206","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"WL-215","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"WL-217","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"WL-218","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"WL-219","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"WL-221","last":null,"current":null,"date":null,"location":null,"filters":null}]},{"name":"HEAVY TRUCKS","unit":"KM","interval":5000,"rows":[{"code":"AD-002","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"CSCV-002","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-007","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-013","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-015","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-016","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-017","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-018","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-019","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-020","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-021","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-022","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-023","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-024","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-025","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-026","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-027","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-030","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-031","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-031P","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-033","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-035","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-036","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-038","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-039","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-040","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-041","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-045","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-046","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-047","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-048","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-049","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-050","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-051","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-052","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-053","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-054","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-055","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-061","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-062","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-063","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-065","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-066","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-067","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-068","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-069","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-070","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-071","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-072","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-073","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-075","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-076","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-077","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-078","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-079","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-080","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-081","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-083","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-084","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-085","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-087","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-088","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-089","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-091","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-092","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-093","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-094","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-095","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-099","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-101","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-102","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-103","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-104","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-105","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-106","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-107","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-108","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-110","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-111","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"DT-133","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"FB-007","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"FB-010","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"FT-003","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"FT-006","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"FT-007","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"IWTB-008","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"IWTB-010","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"LV-114","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"LV-157","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"LV-218","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"LV-219","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"LV-220","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"LV-221","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"LV-229","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"LV-230","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"TH-014","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"TH-026","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"WT-016","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"WT-018","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"CMT-001","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"CMT-004","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"CMT-006","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"CMT-009","last":null,"current":null,"date":null,"location":null,"filters":null}]},{"name":"LIGHT VEHICLE","unit":"KM","interval":10000,"rows":[{"code":"LV-001","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"LV-114","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"LV-157","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"LV-168","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"LV-180","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"LV-201","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"LV-202","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"LV-203","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"LV-204","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"LV-205","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"LV-207","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"LV-212","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"LV-213","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"LV-218","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"LV-219","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"LV-220","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"LV-221","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"LV-229","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"LV-230","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"LV-233","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"LV-234","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"LV-236","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"LV-237","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"LV-242","last":null,"current":null,"date":null,"location":null,"filters":null}]},{"name":"LIGHT EQUIPMENT","unit":"HR","interval":250,"rows":[{"code":"JE-029","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"JE-069","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"JE-074","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"JE-075","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"JE-084","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"JN-042","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"TWL-019","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"TWL-037","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"TWL-038","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"TWL-058","last":null,"current":null,"date":null,"location":null,"filters":null},{"code":"TWL-069","last":null,"current":null,"date":null,"location":null,"filters":null}]}];
+
+/* ============ I18N ============ */
+const I18N = {
+  tr: {
+    docTitle:"PEMBA · Periyodik Bakım Yönetim Sistemi", titleMid:"Periyodik Bakım", titleSuffix:"Yönetim Sistemi",
+    tabDashboard:"Panel", tabFleet:"Filo", tabHistory:"Bakım Geçmişi",
+    backup:"⬇ Yedek", restore:"⬆ Yedek Yükle", resetExcel:"Excel'e Sıfırla",
+    statTotal:"Toplam Araç", statOverdue:"Bakımı Gecikmiş", statSoon:"Yaklaşan Bakım", statOk:"Uygun", statNoData:"Veri Girilmemiş",
+    catSummaryH:"Kategori Bazlı Durum", intervalsH:"Bakım Periyotları (düzenlenebilir)",
+    intervalsHint:"Değişiklikler otomatik kaydedilir ve tüm hesaplamalara yansır.", urgentH:"En Acil 15 Bakım",
+    noUrgent:"Acil bakım bulunmuyor. 🎉", nVehicles:"{n} araç", nOverdue:"{n} gecikmiş", allGood:"tamam", left:"kaldı",
+    maintRecord:"Bakım Kaydı", setIntervalToast:"{c} periyodu {n} olarak güncellendi",
+    searchPh:"🔍 Filo kodu ara... (ör. DT-045)", allCats:"Tüm Kategoriler", allStatuses:"Tüm Durumlar",
+    status_overdue:"Gecikmiş", status_soon:"Yaklaşıyor", status_ok:"Uygun", status_nodata:"Veri Yok",
+    nRecords:"{n} kayıt",
+    colCode:"Filo Kodu", colCat:"Kategori", colLast:"Son Bakım", colNext:"Sonraki Bakım", colCurrent:"Mevcut",
+    colRemaining:"Kalan", colStatus:"Durum", colDate:"Bakım Tarihi", colLocation:"Lokasyon", colFilters:"Kullanılan Filtreler",
+    colAction:"İşlem", colUnit:"Birim",
+    btnMaint:"🛠 Bakım", btnMeter:"⚡ Sayaç", btnMaintTitle:"Bakım kaydı gir", btnMeterTitle:"Sayaç güncelle", btnDeleteTitle:"Makineyi sil",
+    addMachine:"＋ Makine Ekle",
+    histPh:"🔍 Kod veya açıklama ara...", clearHistory:"Geçmişi Temizle",
+    hDate:"Tarih", hCode:"Filo Kodu", hCat:"Kategori", hAction:"İşlem", hValue:"Değer", hLocation:"Lokasyon", hFiltersNote:"Filtreler / Not",
+    typeMaint:"🛠 Bakım", typeMeter:"⚡ Sayaç",
+    histEmpty:"Henüz kayıt yok. Filo tablosundan bakım girişi yapabilirsiniz.",
+    confirmClear:"Bakım geçmişi silinecek. Emin misiniz?", histCleared:"Geçmiş temizlendi",
+    maintTitle:"🛠 Bakım Kaydı", readingTitle:"⚡ Sayaç Güncelle",
+    dateLbl:"Bakım Tarihi", locationLbl:"Lokasyon", filtersLbl:"Kullanılan Filtreler", noteLbl:"Not (opsiyonel)",
+    phLocation:"ör. Atölye-1 / Şantiye A", phFilters:"ör. Yağ, Yakıt, Hava filtresi", phNote:"Ek açıklamalar...", phValue:"ör. 12500",
+    valueAtService:"Bakım Anındaki Değer ({u})", meterValueLbl:"Mevcut Değer ({u})",
+    nextManualLbl:"Sonraki Bakım (elle)", nextManualHint:"Boş bırakırsanız otomatik hesaplanır (Son Bakım + Periyot).",
+    manualNextTitle:"Sonraki bakım elle girildi", manualNextNote:"sonraki bakım elle: {v} {u}", prevNote:"önceki: {v} {u}",
+    infoNext:"Sonraki bakım", infoRem:"Kalan",
+    valueHint:'Bu değer hem "Son Bakım" hem "Mevcut" olarak kaydedilir; sonraki bakım {v} {u} olacak şekilde hesaplanır.',
+    invalidValue:"Geçerli bir değer girin",
+    savedMaint:"✅ {c} bakımı kaydedildi · sonraki: {v} {u}",
+    savedMeter:"⚡ {c} sayacı {v} {u} · kalan: {k}",
+    addTitle:"➕ Makine Ekle", addSub:"Filo kodu, kategori ve periyot ile yeni bir makine ekleyin.",
+    addSubHint:"Mevut kategoriyi seçin veya yeni bir kategori yazın.",
+    fCode:"Filo Kodu", fCodePh:"ör. DT-120", fCategory:"Kategori", fCategoryPh:"ör. HEAVY TRUCKS",
+    fUnit:"Birim", fInterval:"Bakım Periyodu", fIntervalPh:"ör. 5000",
+    fCurrent:"Mevcut Değer (opsiyonel)", fCurrentPh:"ör. 0", fLocation:"Lokasyon (opsiyonel)",
+    errCodeReq:"Filo kodu zorunlu", errCodeDup:"Bu filo kodu zaten kullanılıyor", errCatReq:"Kategori zorunlu",
+    errIntervalReq:"Geçerli bir bakım periyodu girin", added:"✅ {c} filoya eklendi",
+    confirmDelete:"{c} silinecek. Emin misiniz?", deleted:"🗑 {c} filodan silindi",
+    cancel:"İptal", save:"Kaydet",
+    csvToast:"CSV indirildi (Excel ile açılabilir)", backupToast:"JSON yedek indirildi",
+    restored:"Yedek geri yüklendi", restoreFail:"Yedek dosyası okunamadı",
+    confirmReset:"Tüm kayıtlar silinip Excel verisine sıfırlanacak. Emin misiniz?", resetDone:"Excel verisine sıfırlandı",
+    langToast:"🌐 Arayüz dili: Türkçe"
+  },
+  en: {
+    docTitle:"PEMBA · Preventive Maintenance Management System", titleMid:"Preventive Maintenance", titleSuffix:"Management System",
+    tabDashboard:"Dashboard", tabFleet:"Fleet", tabHistory:"Maintenance History",
+    backup:"⬇ Backup", restore:"⬆ Restore Backup", resetExcel:"Reset to Excel",
+    statTotal:"Total Vehicles", statOverdue:"Overdue Maintenance", statSoon:"Upcoming Maintenance", statOk:"OK", statNoData:"No Data Entered",
+    catSummaryH:"Status by Category", intervalsH:"Maintenance Intervals (editable)",
+    intervalsHint:"Changes are saved automatically and applied to all calculations.", urgentH:"Top 15 Most Urgent",
+    noUrgent:"No urgent maintenance. 🎉", nVehicles:"{n} vehicles", nOverdue:"{n} overdue", allGood:"all good", left:"left",
+    maintRecord:"Log Service", setIntervalToast:"{c} interval updated to {n}",
+    searchPh:"🔍 Search fleet code... (e.g. DT-045)", allCats:"All Categories", allStatuses:"All Statuses",
+    status_overdue:"Overdue", status_soon:"Due Soon", status_ok:"OK", status_nodata:"No Data",
+    nRecords:"{n} records",
+    colCode:"Fleet Code", colCat:"Category", colLast:"Last Service", colNext:"Next Service", colCurrent:"Current",
+    colRemaining:"Remaining", colStatus:"Status", colDate:"Service Date", colLocation:"Location", colFilters:"Filters Used",
+    colAction:"Action", colUnit:"Unit",
+    btnMaint:"🛠 Service", btnMeter:"⚡ Meter", btnMaintTitle:"Log maintenance", btnMeterTitle:"Update meter", btnDeleteTitle:"Delete machine",
+    addMachine:"＋ Add Machine",
+    histPh:"🔍 Search code or note...", clearHistory:"Clear History",
+    hDate:"Date", hCode:"Fleet Code", hCat:"Category", hAction:"Action", hValue:"Value", hLocation:"Location", hFiltersNote:"Filters / Note",
+    typeMaint:"🛠 Service", typeMeter:"⚡ Meter",
+    histEmpty:"No records yet. You can log maintenance from the fleet table.",
+    confirmClear:"Maintenance history will be deleted. Are you sure?", histCleared:"History cleared",
+    maintTitle:"🛠 Maintenance Record", readingTitle:"⚡ Update Meter Reading",
+    dateLbl:"Service Date", locationLbl:"Location", filtersLbl:"Filters Used", noteLbl:"Note (optional)",
+    phLocation:"e.g. Workshop-1 / Site A", phFilters:"e.g. Oil, fuel, air filter", phNote:"Additional notes...", phValue:"e.g. 12500",
+    valueAtService:"Value at Service ({u})", meterValueLbl:"Current Value ({u})",
+    nextManualLbl:"Next Service (manual)", nextManualHint:"Leave empty to calculate automatically (Last Service + Interval).",
+    manualNextTitle:"Next service set manually", manualNextNote:"next service manual: {v} {u}", prevNote:"previous: {v} {u}",
+    infoNext:"Next service", infoRem:"Remaining",
+    valueHint:'This is saved as both "Last Service" and "Current"; next service will be {v} {u}.',
+    invalidValue:"Enter a valid value",
+    savedMaint:"✅ {c} service saved · next: {v} {u}",
+    savedMeter:"⚡ {c} meter set to {v} {u} · remaining: {k}",
+    addTitle:"➕ Add Machine", addSub:"Add a new machine with its fleet code, category and interval.",
+    addSubHint:"Pick an existing category or type a new one.",
+    fCode:"Fleet Code", fCodePh:"e.g. DT-120", fCategory:"Category", fCategoryPh:"e.g. HEAVY TRUCKS",
+    fUnit:"Unit", fInterval:"Maintenance Interval", fIntervalPh:"e.g. 5000",
+    fCurrent:"Current Value (optional)", fCurrentPh:"e.g. 0", fLocation:"Location (optional)",
+    errCodeReq:"Fleet code is required", errCodeDup:"This fleet code already exists", errCatReq:"Category is required",
+    errIntervalReq:"Enter a valid maintenance interval", added:"✅ {c} added to fleet",
+    confirmDelete:"Delete {c}? Are you sure?", deleted:"🗑 {c} removed from fleet",
+    cancel:"Cancel", save:"Save",
+    csvToast:"CSV downloaded (opens in Excel)", backupToast:"JSON backup downloaded",
+    restored:"Backup restored", restoreFail:"Could not read the backup file",
+    confirmReset:"All records will be erased and reset to the Excel data. Are you sure?", resetDone:"Reset to Excel data",
+    langToast:"🌐 Interface language: English"
+  }
+};
+let lang = 'tr';
+function t(k){ const d = I18N[lang] || I18N.tr; return d[k] !== undefined ? d[k] : (I18N.tr[k] !== undefined ? I18N.tr[k] : k); }
+function applyI18n(){
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => { el.placeholder = t(el.dataset.i18nPh); });
+  const lb = document.getElementById('langBtn');
+  if(lb) lb.textContent = lang === 'tr' ? '🌐 TR' : '🌐 EN';
+  document.documentElement.lang = lang;
+  document.title = t('docTitle');
+}
+function toggleLang(){
+  lang = lang === 'tr' ? 'en' : 'tr';
+  store.settings.lang = lang;
+  persist();
+  applyI18n(); renderAll(); toast(t('langToast'));
+}
+
+/* ============ STATE ============ */
+const STORE_KEY = 'pemba-maintenance-v1';
+let store = loadStore();
+
+function loadStore(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(raw){ const s = JSON.parse(raw); if(s && s.vehicles){ if(!s.settings) s.settings = { lang:'tr' }; lang = s.settings.lang === 'en' ? 'en' : 'tr'; return s; } }
+  }catch(e){}
+  return seedStore();
+}
+function seedStore(){
+  const vehicles = {};
+  for(const cat of SEED){
+    for(const r of cat.rows){
+      vehicles[cat.name + '|' + r.code] = {
+        code:r.code, cat:cat.name, unit:cat.unit, interval:cat.interval,
+        last:r.last, current:r.current, date:r.date, location:r.location, filters:r.filters, nextMan: r.nextMan ?? null
+      };
+    }
+  }
+  return { vehicles, history:[], intervals:{}, settings:{ lang:'tr' } };
+}
+function persist(){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(store)); }catch(e){}
+}
+function resetAll(){
+  if(!confirm(t('confirmReset'))) return;
+  store = seedStore(); persist(); renderAll(); toast(t('resetDone'));
+}
+
+/* ============ HELPERS ============ */
+function intervalOf(v){
+  return store.intervals[v.cat] || v.interval;
+}
+function calc(v){
+  const iv = intervalOf(v);
+  const auto = (v.last ?? 0) + iv;
+  const manual = v.nextMan !== null && v.nextMan !== undefined;
+  const next = manual ? v.nextMan : auto;
+  if(v.current === null || v.current === undefined){
+    return { next, kalan:null, status:'nodata', iv, manual, auto };
+  }
+  const kalan = next - v.current;
+  let status = 'ok';
+  if(kalan < 0) status = 'overdue';
+  else if(kalan <= iv * 0.2) status = 'soon';
+  return { next, kalan, status, iv, manual, auto };
+}
+const STATUS = {
+  overdue:{ key:'status_overdue', cls:'red', color:'var(--red)' },
+  soon:{ key:'status_soon', cls:'orange', color:'var(--orange)' },
+  ok:{ key:'status_ok', cls:'green', color:'var(--green)' },
+  nodata:{ key:'status_nodata', cls:'gray', color:'var(--gray)' }
+};
+function stLabel(s){ return t(STATUS[s].key); }
+function fmt(n){
+  if(n === null || n === undefined) return '—';
+  return Number(n).toLocaleString(lang === 'tr' ? 'tr-TR' : 'en-US');
+}
+function fmtDate(d){
+  if(!d) return '—';
+  const [y,m,dd] = d.split('-');
+  return lang === 'tr' ? `${dd}.${m}.${y}` : `${m}/${dd}/${y}`;
+}
+function todayISO(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._tm); t._tm = setTimeout(()=>t.classList.remove('show'), 2600);
+}
+
+/* ============ VIEWS / TABS ============ */
+document.querySelectorAll('.tab').forEach(btn=>{
+  btn.onclick = ()=>{
+    document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    document.getElementById('view-' + btn.dataset.view).classList.add('active');
+  };
+});
+
+/* ============ DASHBOARD ============ */
+function renderDashboard(){
+  const all = Object.values(store.vehicles);
+  const counts = { overdue:0, soon:0, ok:0, nodata:0 };
+  const byCat = {};
+  for(const v of all){
+    const c = calc(v);
+    counts[c.status]++;
+    if(!byCat[v.cat]) byCat[v.cat] = { total:0, overdue:0, soon:0, ok:0, nodata:0, unit:v.unit };
+    byCat[v.cat].total++; byCat[v.cat][c.status]++;
+  }
+  document.getElementById('statCards').innerHTML = `
+    <div class="card blue"><div class="num">${all.length}</div><div class="lbl">${t('statTotal')}</div></div>
+    <div class="card red"><div class="num">${counts.overdue}</div><div class="lbl">${t('statOverdue')}</div></div>
+    <div class="card orange"><div class="num">${counts.soon}</div><div class="lbl">${t('statSoon')}</div></div>
+    <div class="card green"><div class="num">${counts.ok}</div><div class="lbl">${t('statOk')}</div></div>
+    <div class="card gray"><div class="num">${counts.nodata}</div><div class="lbl">${t('statNoData')}</div></div>`;
+
+  let html = '';
+  for(const [cat, s] of Object.entries(byCat)){
+    const w = n => (n / s.total * 100).toFixed(1) + '%';
+    html += `<div class="catrow">
+      <span class="name">${cat}</span>
+      <div class="bar">
+        <i style="width:${w(s.overdue)};background:var(--red)"></i>
+        <i style="width:${w(s.soon)};background:var(--orange)"></i>
+        <i style="width:${w(s.ok)};background:var(--green)"></i>
+        <i style="width:${w(s.nodata)};background:var(--gray)"></i>
+      </div>
+      <span class="muted" style="font-size:12px">${t('nVehicles').replace('{n}', s.total)}</span>
+      ${s.overdue ? `<span class="pill red">${t('nOverdue').replace('{n}', s.overdue)}</span>` : `<span class="pill green">${t('allGood')}</span>`}
+    </div>`;
+  }
+  document.getElementById('catSummary').innerHTML = html;
+
+  const ints = {};
+  for(const v of Object.values(store.vehicles)){
+    if(!ints[v.cat]) ints[v.cat] = { unit:v.unit, val:intervalOf(v) };
+  }
+  document.getElementById('intervalEditor').innerHTML = Object.entries(ints).map(([cat, o])=>`
+    <div class="interval-row">
+      <span class="name" style="flex:1">${cat}</span>
+      <input type="number" min="1" value="${o.val}" onchange="setIntervalValue('${cat.replace(/'/g,"\\'")}', this.value)">
+      <span class="unit">${o.unit}</span>
+    </div>`).join('');
+
+  const urgent = all
+    .map(v => ({ v, c: calc(v) }))
+    .filter(x => x.c.status === 'overdue' || x.c.status === 'soon')
+    .sort((a,b) => a.c.kalan - b.c.kalan)
+    .slice(0, 15);
+  document.getElementById('urgentList').innerHTML = urgent.length
+    ? urgent.map(({v, c}) => `
+      <div class="urgent-item">
+        <span class="code">${v.code}</span>
+        <span class="muted" style="font-size:12px">${v.cat}</span>
+        <span class="pill ${STATUS[c.status].cls}">${stLabel(c.status)}</span>
+        <span class="kalan" style="color:${STATUS[c.status].color}">${fmt(c.kalan)} ${v.unit} ${t('left')}</span>
+        <button class="btn sm primary" onclick="openMaint('${v.cat.replace(/'/g,"\\'")}|${v.code}')">${t('maintRecord')}</button>
+      </div>`).join('')
+    : `<div class="muted">${t('noUrgent')}</div>`;
+}
+function setIntervalValue(cat, val){
+  const n = parseInt(val, 10);
+  if(!n || n < 1) return;
+  store.intervals[cat] = n; persist(); renderAll();
+  toast(t('setIntervalToast').replace('{c}', cat).replace('{n}', n));
+}
+
+/* ============ FLEET TABLE ============ */
+let sortKey = 'kalan', sortDir = 1;
+document.querySelectorAll('#fleetTable th[data-sort]').forEach(th=>{
+  th.onclick = ()=>{
+    const k = th.dataset.sort;
+    if(sortKey === k) sortDir *= -1; else { sortKey = k; sortDir = 1; }
+    renderFleet();
+  };
+});
+['search','catFilter','statusFilter'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', renderFleet);
+});
+function renderFilters(){
+  const sel = document.getElementById('catFilter');
+  const cats = [...new Set(Object.values(store.vehicles).map(v=>v.cat))];
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">' + t('allCats') + '</option>' + cats.map(c=>`<option>${c}</option>`).join('');
+  sel.value = cur;
+}
+function renderFleet(){
+  const q = document.getElementById('search').value.trim().toUpperCase();
+  const cf = document.getElementById('catFilter').value;
+  const sf = document.getElementById('statusFilter').value;
+  let rows = Object.values(store.vehicles).map(v => ({ v, c: calc(v) }));
+  if(q) rows = rows.filter(x => x.v.code.toUpperCase().includes(q));
+  if(cf) rows = rows.filter(x => x.v.cat === cf);
+  if(sf) rows = rows.filter(x => x.c.status === sf);
+
+  const statusOrder = { overdue:0, soon:1, ok:2, nodata:3 };
+  rows.sort((a,b)=>{
+    let va, vb;
+    switch(sortKey){
+      case 'code': va = a.v.code; vb = b.v.code; break;
+      case 'cat': va = a.v.cat; vb = b.v.cat; break;
+      case 'last': va = a.v.last ?? -1; vb = b.v.last ?? -1; break;
+      case 'next': va = a.c.next; vb = b.c.next; break;
+      case 'current': va = a.v.current ?? -1; vb = b.v.current ?? -1; break;
+      case 'kalan': va = a.c.kalan === null ? 1e12 : a.c.kalan; vb = b.c.kalan === null ? 1e12 : b.c.kalan; break;
+      case 'status': va = statusOrder[a.c.status]; vb = statusOrder[b.c.status]; break;
+      case 'date': va = a.v.date || ''; vb = b.v.date || ''; break;
+      case 'location': va = a.v.location || ''; vb = b.v.location || ''; break;
+      case 'filters': va = a.v.filters || ''; vb = b.v.filters || ''; break;
+      default: va = a.c.kalan ?? 1e12; vb = b.c.kalan ?? 1e12;
+    }
+    if(va < vb) return -sortDir; if(va > vb) return sortDir; return 0;
+  });
+
+  document.getElementById('rowCount').textContent = t('nRecords').replace('{n}', rows.length);
+  const key = cat => cat.replace(/'/g,"\\'");
+  document.getElementById('fleetBody').innerHTML = rows.map(({v, c})=>{
+    const st = STATUS[c.status];
+    const pct = c.kalan === null ? 0 : Math.max(0, Math.min(100, c.kalan / c.iv * 100));
+    return `<tr>
+      <td class="code">${v.code}</td>
+      <td class="muted">${v.cat}</td>
+      <td class="num-cell">${fmt(v.last)} ${v.last!=null?v.unit:''}</td>
+      <td class="num-cell"${c.manual ? ` title="${t('manualNextTitle')}"` : ''}>${fmt(c.next)} ${v.unit}${c.manual ? ' ✎' : ''}</td>
+      <td class="num-cell">${fmt(v.current)} ${v.current!=null?v.unit:''}</td>
+      <td class="kalan-cell">
+        ${c.kalan === null ? '<span class="muted">—</span>' : `<b style="color:${st.color}">${fmt(c.kalan)} ${v.unit}</b>`}
+        <div class="kalan-bar"><i style="width:${pct}%;background:${st.color}"></i></div>
+      </td>
+      <td><span class="pill ${st.cls}">${stLabel(c.status)}</span></td>
+      <td>${fmtDate(v.date)}</td>
+      <td>${v.location || '<span class="muted">—</span>'}</td>
+      <td>${v.filters || '<span class="muted">—</span>'}</td>
+      <td class="row-actions">
+        <button class="btn sm primary" onclick="openMaint('${key(v.cat)}|${v.code}')" title="${t('btnMaintTitle')}">${t('btnMaint')}</button>
+        <button class="btn sm" onclick="openReading('${key(v.cat)}|${v.code}')" title="${t('btnMeterTitle')}">${t('btnMeter')}</button>
+        <button class="btn sm danger" onclick="deleteMachine('${key(v.cat)}|${v.code}')" title="${t('btnDeleteTitle')}">🗑</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+/* ============ MODALS ============ */
+let activeKey = null;
+function openMaint(key){
+  activeKey = key;
+  const v = store.vehicles[key]; if(!v) return;
+  const c = calc(v);
+  document.getElementById('maintInfo').textContent =
+    `${v.code} · ${v.cat} · ${t('infoNext')}: ${fmt(c.next)} ${v.unit} · ${t('infoRem')}: ${c.kalan===null?'—':fmt(c.kalan)+' '+v.unit}`;
+  document.getElementById('mDate').value = todayISO();
+  document.getElementById('mValueLabel').textContent = t('valueAtService').replace('{u}', v.unit);
+  const mVal = document.getElementById('mValue');
+  mVal.value = v.current ?? '';
+  document.getElementById('mNext').value = '';
+  const updNext = () => {
+    const parsed = parseFloat(mVal.value);
+    const base = !isNaN(parsed) ? parsed : (v.current !== null && v.current !== undefined ? v.current : (v.last ?? 0));
+    const autoNext = base + intervalOf(v);
+    document.getElementById('mNext').placeholder = fmt(autoNext) + ' ' + v.unit;
+    document.getElementById('mValueHint').textContent =
+      t('valueHint').replace('{v}', fmt(autoNext)).replace('{u}', v.unit);
+  };
+  updNext();
+  mVal.oninput = updNext;
+  document.getElementById('mLocation').value = v.location || '';
+  document.getElementById('mFilters').value = v.filters || '';
+  document.getElementById('mNote').value = '';
+  document.getElementById('maintOverlay').classList.add('open');
+}
+function openReading(key){
+  activeKey = key;
+  const v = store.vehicles[key]; if(!v) return;
+  const c = calc(v);
+  document.getElementById('readingInfo').textContent =
+    `${v.code} · ${v.cat} · ${t('infoRem')}: ${c.kalan===null?'—':fmt(c.kalan)+' '+v.unit}`;
+  document.getElementById('rValueLabel').textContent = t('meterValueLbl').replace('{u}', v.unit);
+  document.getElementById('rValue').value = v.current ?? '';
+  const rNext = document.getElementById('rNext');
+  rNext.value = (v.nextMan !== null && v.nextMan !== undefined) ? v.nextMan : '';
+  rNext.placeholder = fmt(c.auto) + ' ' + v.unit;
+  document.getElementById('readingOverlay').classList.add('open');
+}
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.overlay').forEach(o=>{
+  o.addEventListener('click', e=>{ if(e.target === o) o.classList.remove('open'); });
+});
+document.addEventListener('keydown', e=>{
+  if(e.key === 'Escape') document.querySelectorAll('.overlay.open').forEach(o=>o.classList.remove('open'));
+});
+
+function saveMaintenance(){
+  const v = store.vehicles[activeKey]; if(!v) return;
+  const val = parseFloat(document.getElementById('mValue').value);
+  if(isNaN(val) || val < 0){ toast(t('invalidValue')); return; }
+  const mNextRaw = document.getElementById('mNext').value;
+  let nextMan = null;
+  if(mNextRaw !== ''){
+    nextMan = parseFloat(mNextRaw);
+    if(isNaN(nextMan) || nextMan < 0){ toast(t('invalidValue')); return; }
+  }
+  const date = document.getElementById('mDate').value || todayISO();
+  const location = document.getElementById('mLocation').value.trim();
+  const filters = document.getElementById('mFilters').value.trim();
+  const note = document.getElementById('mNote').value.trim();
+  v.last = val; v.current = val; v.date = date;
+  v.nextMan = nextMan;
+  if(location) v.location = location;
+  if(filters) v.filters = filters;
+  let fullNote = note;
+  if(nextMan !== null){
+    const mn = t('manualNextNote').replace('{v}', fmt(nextMan)).replace('{u}', v.unit);
+    fullNote = fullNote ? fullNote + ' · ' + mn : mn;
+  }
+  store.history.unshift({
+    ts: Date.now(), date, code: v.code, cat: v.cat, unit: v.unit,
+    type: 'Bakım', value: val, location, filters, note: fullNote
+  });
+  if(store.history.length > 1000) store.history.length = 1000;
+  persist(); closeModal('maintOverlay'); renderAll();
+  toast(t('savedMaint').replace('{c}', v.code).replace('{v}', fmt(nextMan !== null ? nextMan : val + intervalOf(v))).replace('{u}', v.unit));
+}
+function saveReading(){
+  const v = store.vehicles[activeKey]; if(!v) return;
+  const val = parseFloat(document.getElementById('rValue').value);
+  if(isNaN(val) || val < 0){ toast(t('invalidValue')); return; }
+  const rNextRaw = document.getElementById('rNext').value;
+  let nextMan = null;
+  if(rNextRaw !== ''){
+    nextMan = parseFloat(rNextRaw);
+    if(isNaN(nextMan) || nextMan < 0){ toast(t('invalidValue')); return; }
+  }
+  const prev = v.current;
+  v.current = val;
+  v.nextMan = nextMan;
+  const notes = [];
+  if(prev !== null && prev !== undefined) notes.push(t('prevNote').replace('{v}', fmt(prev)).replace('{u}', v.unit));
+  if(nextMan !== null) notes.push(t('manualNextNote').replace('{v}', fmt(nextMan)).replace('{u}', v.unit));
+  store.history.unshift({
+    ts: Date.now(), date: todayISO(), code: v.code, cat: v.cat, unit: v.unit,
+    type: 'Sayaç', value: val, location:'', filters:'', note: notes.join(' · ')
+  });
+  if(store.history.length > 1000) store.history.length = 1000;
+  persist(); closeModal('readingOverlay'); renderAll();
+  const c = calc(v);
+  toast(t('savedMeter').replace('{c}', v.code).replace('{v}', fmt(val)).replace('{u}', v.unit)
+    .replace('{k}', c.kalan===null?'—':fmt(c.kalan)+' '+v.unit));
+}
+
+/* ============ HISTORY ============ */
+document.getElementById('histSearch').addEventListener('input', renderHistory);
+function renderHistory(){
+  const q = document.getElementById('histSearch').value.trim().toUpperCase();
+  let rows = store.history;
+  if(q) rows = rows.filter(h => (h.code + ' ' + (h.note||'') + ' ' + (h.location||'')).toUpperCase().includes(q));
+  document.getElementById('histCount').textContent = t('nRecords').replace('{n}', rows.length);
+  document.getElementById('histBody').innerHTML = rows.length
+    ? rows.map(h=>`<tr>
+        <td>${fmtDate(h.date)}</td>
+        <td class="code">${h.code}</td>
+        <td class="muted">${h.cat}</td>
+        <td>${h.type === 'Bakım' ? t('typeMaint') : t('typeMeter')}</td>
+        <td class="num-cell">${fmt(h.value)} ${h.unit}</td>
+        <td>${h.location || '—'}</td>
+        <td>${[h.filters, h.note].filter(Boolean).join(' · ') || '—'}</td>
+      </tr>`).join('')
+    : `<tr><td colspan="7" class="muted" style="text-align:center; padding:24px">${t('histEmpty')}</td></tr>`;
+}
+function clearHistory(){
+  if(!confirm(t('confirmClear'))) return;
+  store.history = []; persist(); renderHistory(); toast(t('histCleared'));
+}
+
+/* ============ EXPORT / IMPORT ============ */
+function exportCSV(){
+  const header = [t('colCode'),t('colCat'),t('colLast'),t('colNext'),t('colCurrent'),t('colRemaining'),t('colUnit'),t('colStatus'),t('colDate'),t('colLocation'),t('colFilters')];
+  const lines = [header.join(';')];
+  for(const v of Object.values(store.vehicles)){
+    const c = calc(v);
+    lines.push([
+      v.code, v.cat, v.last ?? '', c.next, v.current ?? '',
+      c.kalan === null ? '' : c.kalan, v.unit, stLabel(c.status),
+      v.date || '', v.location || '', (v.filters || '').replace(/;/g, ',')
+    ].join(';'));
+  }
+  downloadFile('periyodik-bakim.csv', '\uFEFF' + lines.join('\r\n'), 'text/csv;charset=utf-8');
+  toast(t('csvToast'));
+}
+function backupJSON(){
+  downloadFile('periyodik-bakim-yedek.json', JSON.stringify(store, null, 2), 'application/json');
+  toast(t('backupToast'));
+}
+function restoreJSON(e){
+  const f = e.target.files[0]; if(!f) return;
+  const rd = new FileReader();
+  rd.onload = ()=>{
+    try{
+      const s = JSON.parse(rd.result);
+      if(!s.vehicles) throw new Error('geçersiz');
+      store = s; persist(); renderAll(); toast(t('restored'));
+    }catch(err){ toast(t('restoreFail')); }
+  };
+  rd.readAsText(f);
+  e.target.value = '';
+}
+function downloadFile(name, content, type){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], {type}));
+  a.download = name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
+}
+
+/* ============ ADD / DELETE MACHINE ============ */
+function openAdd(){
+  const hint = document.getElementById('aCodeHint');
+  hint.textContent = ''; hint.style.color = '';
+  document.getElementById('aCode').value = '';
+  document.getElementById('aCat').value = '';
+  document.getElementById('aUnit').value = 'KM';
+  document.getElementById('aInterval').value = '';
+  document.getElementById('aCurrent').value = '';
+  document.getElementById('aLocation').value = '';
+  document.getElementById('catList').innerHTML =
+    [...new Set(Object.values(store.vehicles).map(v => v.cat))]
+      .map(c => `<option value="${c}">`).join('');
+  document.getElementById('addOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('aCode').focus(), 50);
+}
+function addErr(msg){
+  const hint = document.getElementById('aCodeHint');
+  hint.textContent = msg; hint.style.color = 'var(--red)';
+}
+document.getElementById('aCat').addEventListener('change', () => {
+  const sample = Object.values(store.vehicles).find(v => v.cat === document.getElementById('aCat').value);
+  if(sample){
+    document.getElementById('aUnit').value = sample.unit;
+    document.getElementById('aInterval').value = intervalOf(sample);
+  }
+});
+function saveMachine(){
+  const code = document.getElementById('aCode').value.trim().toUpperCase();
+  const cat = document.getElementById('aCat').value.trim().toUpperCase();
+  const unit = document.getElementById('aUnit').value;
+  const interval = parseInt(document.getElementById('aInterval').value, 10);
+  const currentRaw = document.getElementById('aCurrent').value;
+  const current = currentRaw === '' ? null : parseFloat(currentRaw);
+  const location = document.getElementById('aLocation').value.trim();
+  if(!code){ addErr(t('errCodeReq')); return; }
+  if(Object.values(store.vehicles).some(v => v.code.toUpperCase() === code)){ addErr(t('errCodeDup')); return; }
+  if(!cat){ addErr(t('errCatReq')); return; }
+  if(!interval || interval < 1){ addErr(t('errIntervalReq')); return; }
+  if(current !== null && (isNaN(current) || current < 0)){ addErr(t('invalidValue')); return; }
+  store.vehicles[cat + '|' + code] = { code, cat, unit, interval, last:null, current, date:null, location, filters:null };
+  if(!store.intervals[cat]) store.intervals[cat] = interval;
+  persist();
+  closeModal('addOverlay');
+  document.querySelector('.tab[data-view="fleet"]').click();
+  document.getElementById('search').value = code;
+  renderAll();
+  toast(t('added').replace('{c}', code));
+}
+function deleteMachine(key){
+  const v = store.vehicles[key]; if(!v) return;
+  if(!confirm(t('confirmDelete').replace('{c}', v.code))) return;
+  delete store.vehicles[key];
+  persist(); renderAll();
+  toast(t('deleted').replace('{c}', v.code));
+}
+
+/* ============ INIT ============ */
+function renderAll(){ renderDashboard(); renderFilters(); renderFleet(); renderHistory(); }
+applyI18n();
+renderAll();
+</script>
+</body>
+</html>
