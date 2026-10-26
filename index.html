@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>PEMBA · Periyodik Bakım Yönetim Sistemi</title>
 <style>
   :root{
@@ -98,6 +98,55 @@
   .urgent-item:last-child{border:none}
   .urgent-item .code{width:90px}
   .urgent-item .kalan{margin-left:auto; font-weight:700}
+  /* ============ MOBILE ============ */
+  @media(max-width:760px){
+    header{padding:10px 12px; gap:8px}
+    header h1{font-size:15px; flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+    #syncBadge{flex:0 0 auto}
+    .tabs{order:3; flex:1 1 100%; margin-left:0; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:2px; scrollbar-width:none}
+    .tabs::-webkit-scrollbar{display:none}
+    .tab{white-space:nowrap; padding:9px 14px; min-height:40px}
+    .h-actions{order:4; flex:1 1 100%; margin-left:0; gap:8px}
+    .h-actions .btn{flex:1 1 auto; text-align:center; padding:10px 8px; min-height:44px}
+
+    main{padding:14px 12px}
+    .cards{grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px}
+    .card{padding:12px}
+    .card .num{font-size:24px}
+    .panel{padding:14px 12px}
+    .catrow .bar{flex:1 1 auto; min-width:70px}
+    .interval-row input{width:80px}
+    .urgent-item .code{width:auto; min-width:70px}
+
+    .filters{gap:8px}
+    .filters input{min-width:0; flex:1 1 100%; padding:11px 12px}
+    .filters select{flex:1 1 45%; padding:11px 10px}
+    .filters .btn{flex:1 1 100%; min-height:44px; margin-left:0!important}
+    .filters .count{flex:1 1 100%; margin:0 2px}
+
+    .tablewrap{max-height:none; -webkit-overflow-scrolling:touch}
+    table{font-size:12px}
+    th,td{padding:8px 10px}
+    .tablewrap th:first-child,.tablewrap td:first-child{position:sticky; left:0; z-index:6; background:var(--panel)}
+    .tablewrap th:first-child{background:var(--panel2); z-index:7}
+    .tablewrap tr:hover td:first-child{background:#1b2532}
+
+    .modal{width:100%; max-width:calc(100vw - 24px); padding:16px; border-radius:12px}
+    .overlay{overflow-y:auto; -webkit-overflow-scrolling:touch; padding:14px 12px; align-items:flex-start}
+    .modal{margin:auto 0}
+    .modal-actions{gap:8px}
+    .modal-actions .btn{flex:1; min-height:44px}
+    .field input,.field textarea,.field select{font-size:16px} /* iOS zoom önleme */
+
+    #toast{left:12px; right:12px; bottom:12px; text-align:center}
+  }
+  @media(max-width:420px){
+    header h1{font-size:14px}
+    .cards{grid-template-columns:1fr 1fr}
+    .filters select{flex:1 1 100%}
+    .urgent-item{flex-wrap:wrap; gap:6px}
+    .urgent-item .kalan{margin-left:0; width:100%; text-align:right}
+  }
   @media print{
     header,.h-actions,.filters,.row-actions,.tabs{display:none!important}
     body{background:#fff; color:#000}
@@ -121,7 +170,6 @@
     <button class="btn" onclick="exportCSV()">⬇ CSV</button>
     <button class="btn" onclick="backupJSON()" data-i18n="backup">⬇ Yedek</button>
     <button class="btn" onclick="document.getElementById('restoreFile').click()" data-i18n="restore">⬆ Yedek Yükle</button>
-    <button class="btn danger" onclick="resetAll()" data-i18n="resetExcel">Excel'e Sıfırla</button>
     <input type="file" id="restoreFile" accept=".json" style="display:none" onchange="restoreJSON(event)">
   </div>
 </header>
@@ -311,7 +359,7 @@ const I18N = {
   tr: {
     docTitle:"PEMBA · Periyodik Bakım Yönetim Sistemi", titleMid:"Periyodik Bakım", titleSuffix:"Yönetim Sistemi",
     tabDashboard:"Panel", tabFleet:"Filo", tabHistory:"Bakım Geçmişi",
-    backup:"⬇ Yedek", restore:"⬆ Yedek Yükle", resetExcel:"Excel'e Sıfırla",
+    backup:"⬇ Yedek", restore:"⬆ Yedek Yükle",
     statTotal:"Toplam Araç", statOverdue:"Bakımı Gecikmiş", statSoon:"Yaklaşan Bakım", statOk:"Uygun", statNoData:"Veri Girilmemiş",
     catSummaryH:"Kategori Bazlı Durum", intervalsH:"Bakım Periyotları (düzenlenebilir)",
     intervalsHint:"Değişiklikler otomatik kaydedilir ve tüm hesaplamalara yansır.", urgentH:"En Acil 15 Bakım",
@@ -352,14 +400,13 @@ const I18N = {
     cancel:"İptal", save:"Kaydet",
     csvToast:"CSV indirildi (Excel ile açılabilir)", backupToast:"JSON yedek indirildi",
     restored:"Yedek geri yüklendi", restoreFail:"Yedek dosyası okunamadı",
-    confirmReset:"Tüm kayıtlar silinip Excel verisine sıfırlanacak. Emin misiniz?", resetDone:"Excel verisine sıfırlandı",
     langToast:"🌐 Arayüz dili: Türkçe",
     syncConnecting:"Bağlanıyor…", syncOnline:"Senkronize", syncOffline:"Çevrimdışı"
   },
   en: {
     docTitle:"PEMBA · Preventive Maintenance Management System", titleMid:"Preventive Maintenance", titleSuffix:"Management System",
     tabDashboard:"Dashboard", tabFleet:"Fleet", tabHistory:"Maintenance History",
-    backup:"⬇ Backup", restore:"⬆ Restore Backup", resetExcel:"Reset to Excel",
+    backup:"⬇ Backup", restore:"⬆ Restore Backup",
     statTotal:"Total Vehicles", statOverdue:"Overdue Maintenance", statSoon:"Upcoming Maintenance", statOk:"OK", statNoData:"No Data Entered",
     catSummaryH:"Status by Category", intervalsH:"Maintenance Intervals (editable)",
     intervalsHint:"Changes are saved automatically and applied to all calculations.", urgentH:"Top 15 Most Urgent",
@@ -400,7 +447,6 @@ const I18N = {
     cancel:"Cancel", save:"Save",
     csvToast:"CSV downloaded (opens in Excel)", backupToast:"JSON backup downloaded",
     restored:"Backup restored", restoreFail:"Could not read the backup file",
-    confirmReset:"All records will be erased and reset to the Excel data. Are you sure?", resetDone:"Reset to Excel data",
     langToast:"🌐 Interface language: English",
     syncConnecting:"Connecting…", syncOnline:"Synced", syncOffline:"Offline"
   }
@@ -450,10 +496,6 @@ function persist(){
   store.rev = Date.now();
   saveLocal();
   schedulePush();
-}
-function resetAll(){
-  if(!confirm(t('confirmReset'))) return;
-  store = seedStore(); persist(); renderAll(); toast(t('resetDone'));
 }
 
 /* ============ HELPERS ============ */

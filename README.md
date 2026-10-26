@@ -15,7 +15,7 @@ Kurulum gerektirmez — tek dosya, tarayıcıda çalışır.
 - **Bakım geçmişi**: tüm bakım ve sayaç kayıtları aranabilir
 - **TR / EN arayüz**: tek tıkla dil değiştirme, tercih hatırlanır
 - **Bulut senkronu**: Firebase Realtime Database ile cihazlar arası canlı senkron (son yazan kazanır); bağlantı yokken localStorage devrede, bağlantı gelince eşitlenir
-- **Veri**: CSV dışa aktarım (Excel uyumlu), JSON yedek/geri yükleme, Excel'e sıfırlama
+- **Veri**: CSV dışa aktarım (Excel uyumlu), JSON yedek/geri yükleme
 
 ## Kullanım
 
